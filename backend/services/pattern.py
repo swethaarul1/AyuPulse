@@ -11,15 +11,24 @@ from datetime import datetime, timezone
 HISTORY_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "history.json")
 
 
+SESSION_CHECKINS: List[Dict[str, Any]] = []
+
+
+def record_session_checkin(entry: Dict[str, Any]):
+    """Records a new live user check-in in memory for immediate history and pattern reflection."""
+    SESSION_CHECKINS.append(entry)
+
+
 def load_history() -> List[Dict[str, Any]]:
-    """Loads check-in history from data/history.json with prototype seeded data."""
+    """Loads check-in history from data/history.json merged with any live session check-ins."""
+    base = []
     if os.path.exists(HISTORY_FILE):
         try:
             with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                base = json.load(f)
         except Exception:
-            return []
-    return []
+            base = []
+    return base + SESSION_CHECKINS
 
 
 def calculate_checkin_wellness_score(

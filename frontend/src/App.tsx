@@ -7,6 +7,9 @@ import { PlanPage } from './pages/PlanPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { CheckInPage } from './pages/CheckInPage';
 import { CheckInResultPage } from './pages/CheckInResultPage';
+import { ConnectPage } from './pages/ConnectPage';
+import { SafetyPage } from './pages/SafetyPage';
+import { BookingPage } from './pages/BookingPage';
 
 export default function App() {
   return (
@@ -18,8 +21,14 @@ export default function App() {
         <Route path="/assessment/result" element={<ResultPage />} />
         <Route path="/plan" element={<PlanPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/community" element={<DashboardPage />} />
         <Route path="/checkin" element={<CheckInPage />} />
         <Route path="/checkin/result" element={<CheckInResultPage />} />
+        <Route path="/tracker" element={<CheckInPage />} />
+        <Route path="/tracker/result" element={<CheckInResultPage />} />
+        <Route path="/connect" element={<ConnectPage />} />
+        <Route path="/connect/:centreId" element={<BookingPage />} />
+        <Route path="/safety" element={<SafetyPage />} />
       </Routes>
     </BrowserRouter>
   );

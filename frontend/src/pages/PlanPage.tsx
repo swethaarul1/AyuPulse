@@ -1,305 +1,292 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import ayuApi, { PreventivePlan, PlanTask } from '../api/client';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Activity, ArrowRight, Check, ChevronDown, ChevronUp, MoonStar, Sparkles, Stethoscope } from 'lucide-react';
+import ayuApi, { type PlanResponse, type DailyTrackerTask } from '../api/client';
 
-const CATEGORY_ICONS: Record<string, string> = {
-  Dinacharya: '🌅',
-  Yoga: '🧘',
-  Pranayama: '💨',
-  Diet: '🥗',
-  Lifestyle: '🌿',
-};
-
-const CATEGORY_COLORS: Record<string, string> = {
-  Dinacharya: 'var(--color-brand)',
-  Yoga: 'var(--color-vata)',
-  Pranayama: 'var(--color-earth)',
-  Diet: '#4D8B72',
-  Lifestyle: '#6D6875',
-};
-
-function TaskDetail({ task, onClose }: { task: PlanTask; onClose: () => void }) {
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200,
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-    }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          background: 'white', borderRadius: 'var(--radius-xl)', padding: 28,
-          maxWidth: 500, width: '100%', maxHeight: '80vh', overflowY: 'auto',
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-          <div>
-            <span className="badge" style={{
-              background: `${CATEGORY_COLORS[task.category] || 'var(--color-brand)'}20`,
-              color: CATEGORY_COLORS[task.category] || 'var(--color-brand)',
-              marginBottom: 8, display: 'inline-block',
-            }}>
-              {CATEGORY_ICONS[task.category] || '✦'} {task.category}
-              {task.duration && ` · ${task.duration}`}
-            </span>
-            <h3 style={{ lineHeight: 1.3 }}>{task.title}</h3>
-          </div>
-          <button
-            onClick={onClose}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--color-text-muted)' }}
-          >✕</button>
-        </div>
-
-        {[
-          { label: 'What', content: task.what, icon: '📌' },
-          { label: 'Why', content: task.why, icon: '💡' },
-          { label: 'How', content: task.how, icon: '📋' },
-        ].map(s => (
-          <div key={s.label} style={{ marginBottom: 16 }}>
-            <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: 6 }}>
-              {s.icon} {s.label.toUpperCase()}
-            </div>
-            <p style={{ fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--color-text)' }}>{s.content}</p>
-          </div>
-        ))}
-
-        <div style={{
-          background: 'var(--color-earth-pale)', borderRadius: 'var(--radius-md)',
-          padding: '10px 14px', fontSize: '0.82rem', color: 'var(--color-earth)',
-          display: 'flex', gap: 8,
-        }}>
-          <span>⚠️</span>
-          <span><strong>Safety:</strong> {task.safety}</span>
-        </div>
-
-        {task.is_adjusted && (
-          <div style={{
-            marginTop: 12, background: 'var(--color-pitta-pale)', borderRadius: 'var(--radius-md)',
-            padding: '8px 12px', fontSize: '0.82rem', color: 'var(--color-pitta)',
-          }}>
-            ✦ Adjusted based on your recent wellness pattern
-          </div>
-        )}
-      </div>
-    </div>
-  );
+function deriveTaskCategory(task: DailyTrackerTask) {
+  const text = `${task.title} ${task.description}`.toLowerCase();
+  if (text.includes('water') || text.includes('hydrate')) return 'Hydration';
+  if (text.includes('breath') || text.includes('pranayama') || text.includes('breathe')) return 'Breath';
+  if (text.includes('meal') || text.includes('food') || text.includes('diet')) return 'Nutrition';
+  if (text.includes('stretch') || text.includes('move') || text.includes('yoga')) return 'Movement';
+  if (text.includes('sleep') || text.includes('rest') || text.includes('ground')) return 'Recovery';
+  return 'Wellness';
 }
 
 export function PlanPage() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [plan, setPlan] = useState<PreventivePlan | null>(null);
+  const [plan, setPlan] = useState<PlanResponse | null>(null);
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [selectedTask, setSelectedTask] = useState<PlanTask | null>(null);
-  const [completing, setCompleting] = useState<string | null>(null);
 
   useEffect(() => {
-    const stateData = location.state?.plan as PreventivePlan | undefined;
-    if (stateData) {
-      setPlan(stateData);
-      setLoading(false);
-      return;
+    const savedPlan = localStorage.getItem('ayupulse_plan');
+    if (savedPlan) {
+      try {
+        setPlan(JSON.parse(savedPlan));
+      } catch {
+        setPlan(null);
+      }
     }
-    // Try from localStorage
-    const planId = localStorage.getItem('ayupulse_plan_id');
-    if (planId) {
-      ayuApi.getPlan(planId).then(p => {
-        setPlan(p);
-        setLoading(false);
-      }).catch(() => {
-        tryBySession();
-      });
-    } else {
-      tryBySession();
+    setLoading(false);
+  }, []);
+
+  const tasks: DailyTrackerTask[] = useMemo(() => {
+    const baseTasks = plan?.daily_tracker ?? [
+      { id: 'wake', title: 'Wake and hydrate', description: 'Drink warm water and begin with a gentle stretch.', completed: false },
+      { id: 'breath', title: 'Breath reset', description: 'A 5-minute pranayama cycle to settle the nervous system.', completed: false },
+      { id: 'meal', title: 'Balanced meals', description: 'Prioritize warm, grounding meals and consistent timing.', completed: false },
+    ];
+
+    return baseTasks.map(task => ({
+      ...task,
+      category: task.category ?? deriveTaskCategory(task),
+    }));
+  }, [plan]);
+
+  const completed = tasks.filter(task => task.completed).length;
+  const pct = tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0;
+
+  const assessment = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('ayupulse_assessment');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
     }
   }, []);
 
-  function tryBySession() {
-    ayuApi.getPlanBySession().then(p => {
-      setPlan(p);
-      setLoading(false);
-    }).catch(() => {
-      setError('No plan found. Complete your assessment first.');
-      setLoading(false);
-    });
-  }
-
-  const handleToggleTask = async (task: PlanTask) => {
-    if (completing) return;
-    setCompleting(task.id);
+  const dominant = plan?.dominant ?? assessment?.dominant ?? 'Balanced';
+  const wellnessScore = useMemo(() => {
+    const checkin = localStorage.getItem('ayupulse_latest_checkin');
+    if (!checkin) return null;
     try {
-      const result = await ayuApi.completeTask(task.id);
-      setPlan(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          tasks: prev.tasks.map(t =>
-            t.id === task.id ? { ...t, is_completed_today: result.completed } : t
-          ),
-        };
-      });
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setCompleting(null);
+      return JSON.parse(checkin).wellness_score ?? null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const focusCopy = useMemo(() => {
+    if (plan?.message) return plan.message;
+    if (dominant === 'Vata') return 'Your Vata-supportive rhythm for today.';
+    if (dominant === 'Pitta') return 'Your steady, focused rhythm for today.';
+    if (dominant === 'Kapha') return 'Your grounding, lightened rhythm for today.';
+    return 'Small, grounding actions shaped around your wellness profile.';
+  }, [dominant, plan]);
+
+  const progressMessage = pct === 0
+    ? 'Your rhythm starts with one small step.'
+    : pct < 50
+      ? 'You are building a steady rhythm.'
+      : pct < 100
+        ? 'You are halfway into today\'s rhythm.'
+        : 'Beautiful — today\'s rhythm is complete.';
+
+  const handleToggleTask = async (task: DailyTrackerTask) => {
+    const nextTasks = tasks.map(item =>
+      item.id === task.id ? { ...item, completed: !item.completed } : item
+    );
+
+    setPlan(current => current ? { ...current, daily_tracker: nextTasks } : current);
+    localStorage.setItem('ayupulse_plan', JSON.stringify({ ...(plan ?? {}), daily_tracker: nextTasks }));
+
+    try {
+      await ayuApi.toggleTask(task.id, !task.completed);
+    } catch {
+      // Keep local update when backend is unavailable; the UI remains functional without breaking the page.
     }
   };
 
-  if (loading) return <div className="loading-center"><div className="loading-spinner" /><p>Loading your plan…</p></div>;
-
-  if (error || !plan) {
-    return (
-      <div className="container--narrow" style={{ paddingTop: 60, textAlign: 'center' }}>
-        <div style={{ fontSize: '3rem', marginBottom: 16 }}>🌿</div>
-        <h2 style={{ marginBottom: 12 }}>No plan yet</h2>
-        <p style={{ color: 'var(--color-text-muted)', marginBottom: 24 }}>{error || 'Complete your assessment to get your personalized plan.'}</p>
-        <button className="btn btn--primary" onClick={() => navigate('/assessment')}>
-          Start Assessment →
-        </button>
-      </div>
-    );
+  if (loading) {
+    return <div className="container--narrow" style={{ paddingTop: 80, textAlign: 'center' }}>Loading plan…</div>;
   }
 
-  const tasks = plan.tasks.sort((a, b) => a.sort_order - b.sort_order);
-  const completed = tasks.filter(t => t.is_completed_today).length;
-  const completePct = tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0;
-
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--color-bg)', paddingBottom: 64 }}>
-      {selectedTask && (
-        <TaskDetail task={selectedTask} onClose={() => setSelectedTask(null)} />
-      )}
-
-      <div className="container--narrow" style={{ paddingTop: 40 }}>
-        {/* Header */}
-        <div className="fade-in" style={{ marginBottom: 32 }}>
-          <div className="badge badge--brand" style={{ marginBottom: 8 }}>Personalized Preventive Plan</div>
-          <h2 style={{ marginBottom: 4 }}>Today's Plan</h2>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-            Practices tailored to your wellness tendency
+    <div style={{ minHeight: '100vh', background: 'var(--color-bg)', padding: '40px 20px 80px' }}>
+      <div className="container--narrow fade-in">
+        <div style={{ marginBottom: 22 }}>
+          <span className="badge badge--brand" style={{ marginBottom: 12 }}>YOUR DAILY PULSE</span>
+          <h1 style={{ marginBottom: 8 }}>Today&apos;s rhythm</h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '1.05rem', lineHeight: 1.7, maxWidth: 620 }}>
+            {focusCopy}
           </p>
         </div>
 
-        {/* Progress card */}
-        <div className="card card--elevated fade-in" style={{ marginBottom: 28, background: 'linear-gradient(135deg, #F0F7F4 0%, #FDFAF6 100%)' }}>
+        <div className="card card--elevated" style={{ marginBottom: 22, padding: 22 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div>
-              <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
-                Today's Progress
+              <div style={{ fontSize: '0.73rem', letterSpacing: '0.08em', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+                Your wellness snapshot
               </div>
-              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', fontWeight: 700, color: 'var(--color-brand)' }}>
-                {completed} / {tasks.length}
-              </div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>tasks completed</div>
             </div>
-            <div style={{
-              width: 72, height: 72, borderRadius: '50%',
-              background: `conic-gradient(var(--color-brand) ${completePct * 3.6}deg, var(--color-border-light) 0)`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <div style={{
-                width: 54, height: 54, borderRadius: '50%', background: 'white',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 700, color: 'var(--color-brand)', fontSize: '1rem',
-              }}>
-                {completePct}%
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-brand)', fontWeight: 700 }}>
+              <Sparkles size={16} />
+              {dominant}
             </div>
           </div>
-          <div className="progress-bar-track" style={{ height: 8 }}>
-            <div
-              className="progress-bar-fill"
-              style={{ width: `${completePct}%`, background: 'var(--color-brand)' }}
-            />
-          </div>
-          {completePct === 100 && (
-            <div style={{
-              marginTop: 12, textAlign: 'center', color: 'var(--color-brand)',
-              fontWeight: 600, fontSize: '0.9rem',
-            }}>
-              🎉 All practices completed today! Wonderful work.
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+            {dominant !== 'Balanced' && (
+              <div style={{ background: 'var(--color-brand-pale)', borderRadius: 'var(--radius-md)', padding: '12px 14px', border: '1px solid var(--color-brand-border)' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Dosha</div>
+                <div style={{ fontWeight: 700, color: 'var(--color-brand)', marginTop: 4 }}>{dominant}</div>
+              </div>
+            )}
+            {wellnessScore !== null && (
+              <div style={{ background: 'var(--color-bg)', borderRadius: 'var(--radius-md)', padding: '12px 14px', border: '1px solid var(--color-border-light)' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Wellness score</div>
+                <div style={{ fontWeight: 700, marginTop: 4 }}>{wellnessScore}</div>
+              </div>
+            )}
+            <div style={{ background: 'var(--color-bg)', borderRadius: 'var(--radius-md)', padding: '12px 14px', border: '1px solid var(--color-border-light)' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Today</div>
+              <div style={{ fontWeight: 700, marginTop: 4 }}>{completed} of {tasks.length} done</div>
             </div>
-          )}
+            {tasks[0] && (
+              <div style={{ background: 'var(--color-bg)', borderRadius: 'var(--radius-md)', padding: '12px 14px', border: '1px solid var(--color-border-light)' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Today&apos;s focus</div>
+                <div style={{ fontWeight: 700, marginTop: 4 }}>{tasks[0].category}</div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Task list */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
-          {tasks.map(task => (
-            <div
-              key={task.id}
-              className={`task-item ${task.is_completed_today ? 'task-item--completed' : ''} ${task.is_adjusted ? 'task-item--adjusted' : ''} fade-in`}
-              onClick={() => setSelectedTask(task)}
-            >
-              <button
-                className={`task-check ${task.is_completed_today ? 'task-check--done' : ''}`}
-                onClick={e => { e.stopPropagation(); handleToggleTask(task); }}
-                disabled={completing === task.id}
-                style={{ cursor: 'pointer' }}
+        <div className="card card--elevated" style={{ marginBottom: 22, padding: 22 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+              <div
+                aria-label="Task completion progress"
+                style={{
+                  width: 88,
+                  height: 88,
+                  borderRadius: '50%',
+                  background: `conic-gradient(var(--color-brand) ${pct}%, var(--color-brand-pale) ${pct}% 100%)`,
+                  display: 'grid',
+                  placeItems: 'center',
+                  boxShadow: 'inset 0 0 0 1px rgba(30,92,65,0.08)',
+                }}
               >
-                {task.is_completed_today && '✓'}
-              </button>
-              <div style={{ flex: 1 }}>
-                <div style={{
-                  fontWeight: 600, fontSize: '0.95rem',
-                  textDecoration: task.is_completed_today ? 'line-through' : 'none',
-                  color: task.is_completed_today ? 'var(--color-brand)' : 'var(--color-text)',
-                }}>
-                  {task.title}
-                </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 4, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span style={{
-                    fontSize: '0.77rem', fontWeight: 600, padding: '2px 8px',
-                    borderRadius: 'var(--radius-full)',
-                    background: `${CATEGORY_COLORS[task.category] || 'var(--color-brand)'}15`,
-                    color: CATEGORY_COLORS[task.category] || 'var(--color-brand)',
-                  }}>
-                    {CATEGORY_ICONS[task.category] || '✦'} {task.category}
-                  </span>
-                  {task.duration && (
-                    <span style={{ fontSize: '0.77rem', color: 'var(--color-text-light)' }}>
-                      ⏱ {task.duration}
-                    </span>
-                  )}
-                  {task.is_adjusted && (
-                    <span style={{ fontSize: '0.7rem', color: 'var(--color-pitta)', fontWeight: 600 }}>
-                      ✦ Adjusted
-                    </span>
-                  )}
+                <div style={{ width: 58, height: 58, borderRadius: '50%', background: 'white', display: 'grid', placeItems: 'center', fontWeight: 700, color: 'var(--color-brand)' }}>
+                  {pct}%
                 </div>
               </div>
-              <span style={{ color: 'var(--color-text-light)', fontSize: '0.85rem' }}>›</span>
+              <div>
+                <div style={{ fontSize: '0.75rem', letterSpacing: '0.08em', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                  Progress
+                </div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 700, lineHeight: 1.2, marginTop: 6 }}>
+                  {completed} of {tasks.length} complete
+                </div>
+                <div style={{ color: 'var(--color-text-muted)', marginTop: 4 }}>{progressMessage}</div>
+              </div>
             </div>
-          ))}
+            <button className="btn btn--primary" onClick={() => navigate('/checkin')}>
+              <Activity size={16} />
+              <span>Check in now</span>
+            </button>
+          </div>
         </div>
 
-        {/* Tip */}
-        <div className="disclaimer" style={{ marginBottom: 24 }}>
-          <span>💡</span>
-          <span>Tap any practice to see the full guidance — What, Why, How, and Safety notes.</span>
+        <div className="card card--elevated" style={{ marginBottom: 22, padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <Stethoscope size={18} color="var(--color-brand)" />
+            <div style={{ fontSize: '0.76rem', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700, color: 'var(--color-text-muted)' }}>
+              Today&apos;s focus
+            </div>
+          </div>
+          <div style={{ fontSize: '1.35rem', fontWeight: 700, marginBottom: 4 }}>{plan?.dominant ? `${plan.dominant}-supportive rhythm` : 'Gentle, steady wellness rhythm'}</div>
+          <div style={{ color: 'var(--color-text-muted)', lineHeight: 1.7 }}>
+            {plan?.message ?? 'Hydration, gentle movement, and regular meal timing support your day.'}
+          </div>
         </div>
 
-        {/* Actions */}
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <button
-            className="btn btn--primary"
-            onClick={() => navigate('/checkin')}
-          >
-            📊 Daily Check-in →
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {tasks.map((task, index) => {
+            const isExpanded = expandedTaskId === task.id;
+            const isCompleted = task.completed;
+
+            return (
+              <div
+                key={task.id}
+                className="card card--elevated"
+                style={{
+                  display: 'flex',
+                  gap: 16,
+                  alignItems: 'flex-start',
+                  padding: 18,
+                  border: isCompleted ? '1px solid var(--color-brand-border)' : '1px solid var(--color-border-light)',
+                  background: isCompleted ? '#F5FBF8' : '#FFFFFF',
+                  opacity: isCompleted ? 0.9 : 1,
+                }}
+              >
+                <div style={{ minWidth: 54, textAlign: 'center', paddingTop: 10 }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700 }}>0{index + 1}</div>
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+                    <span className="badge badge--brand" style={{ fontSize: '0.7rem' }}>{task.category}</span>
+                    {isCompleted && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--color-brand-pale)', color: 'var(--color-brand)', borderRadius: '999px', padding: '6px 10px', fontSize: '0.74rem', fontWeight: 700 }}>
+                        <Check size={14} />
+                        Completed
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ fontWeight: 700, fontSize: '1.15rem', marginBottom: 6 }}>{task.title}</div>
+                  <div style={{ color: 'var(--color-text-muted)', lineHeight: 1.65, marginBottom: 10 }}>{task.description}</div>
+
+                  <button
+                    className="btn btn--ghost btn--sm"
+                    onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}
+                    style={{ marginBottom: 10 }}
+                  >
+                    {isExpanded ? <><ChevronUp size={14} /> View less</> : <><ChevronDown size={14} /> Why this?</>}
+                  </button>
+
+                  {isExpanded && (
+                    <div style={{ background: 'var(--color-bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border-light)', padding: '12px 14px', color: 'var(--color-text-muted)', lineHeight: 1.7 }}>
+                      {task.description}
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  className={isCompleted ? 'btn btn--ghost' : 'btn btn--secondary'}
+                  onClick={() => handleToggleTask(task)}
+                  style={{ minWidth: 132 }}
+                >
+                  {isCompleted ? 'Undo' : 'Mark done'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="card card--elevated" style={{ marginTop: 24, padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+            <MoonStar size={18} color="var(--color-brand)" />
+            <h3 style={{ margin: 0 }}>30-second check-in</h3>
+          </div>
+          <div style={{ color: 'var(--color-text-muted)', marginBottom: 16 }}>How are you feeling today?</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 10, marginBottom: 18 }}>
+            {['Sleep', 'Stress', 'Mood', 'Digestion'].map((label) => (
+              <div key={label} style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border-light)', borderRadius: 'var(--radius-md)', padding: '12px 10px', textAlign: 'center', fontWeight: 600 }}>
+                {label}
+              </div>
+            ))}
+          </div>
+          <button className="btn btn--primary" onClick={() => navigate('/checkin')}>
+            <ArrowRight size={16} />
+            <span>Open check-in</span>
           </button>
-          <button
-            className="btn btn--ghost"
-            onClick={() => navigate('/dashboard')}
-          >
-            View Dashboard
-          </button>
         </div>
 
-        {/* Plan disclaimer */}
         <div className="disclaimer" style={{ marginTop: 24 }}>
           <span>⚠️</span>
-          <span>These practices are traditional wellness guidance for preventive wellbeing — not medical treatments. Consult a qualified practitioner for health concerns.</span>
+          <span>Traditional AYUSH wellness guidance for preventive wellbeing — not a medical diagnosis.</span>
         </div>
       </div>
     </div>

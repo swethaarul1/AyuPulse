@@ -40,6 +40,10 @@ def record_daily_checkin(payload: CheckInRequest):
         "notes": payload.notes
     }
 
+    # Store in live session history for immediate pattern updates
+    from services.pattern import record_session_checkin
+    record_session_checkin(checkin_dict)
+
     return CheckInResponse(
         status="recorded",
         module="checkin",
