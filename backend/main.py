@@ -18,6 +18,7 @@ from routes import (
     pattern_router,
     safety_router,
     centres_router,
+    dashboard_router,
 )
 
 app = FastAPI(
@@ -47,13 +48,17 @@ app.include_router(checkin_router)
 app.include_router(pattern_router)
 app.include_router(safety_router)
 app.include_router(centres_router)
+app.include_router(dashboard_router)
 
 
 # ── HEALTH & ROOT ENDPOINTS ───────────────────────────────────────────────────
 @app.get("/health", tags=["Health"])
 def health_check():
     """Returns application health status."""
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "service": "AyuPulse backend"
+    }
 
 
 @app.get("/", tags=["Root"])
@@ -65,13 +70,16 @@ def root():
         "status": "operational",
         "docs": "/docs",
         "endpoints": {
+            "health": "GET /health",
             "assessment": "POST /api/assessment",
             "plan": "POST /api/plan",
             "checkin": "POST /api/checkin",
             "pattern": "POST /api/pattern",
             "safety": "POST /api/safety",
             "centres": "GET /api/centres",
-            "consultation": "POST /api/consultation"
+            "match": "POST /api/centres/match",
+            "consultation": "POST /api/consultation",
+            "dashboard": "GET /api/dashboard"
         }
     }
 
@@ -79,12 +87,11 @@ def root():
 # ── ERROR HANDLING ────────────────────────────────────────────────────────────
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    # Log without leaking secrets or internals
     return JSONResponse(
         status_code=500,
         content={
             "status": "error",
-            "message": "An internal server error occurred. Please try again or contact support.",
+            "message": "An internal server error occurred. Please verify your request payload.",
         }
     )
 
