@@ -1,0 +1,74 @@
+[
+  {
+    "id": "ayush-001",
+    "name": "All India Institute of Ayurveda (AIIA)",
+    "system": "Ayurveda",
+    "city": "New Delhi",
+    "state": "Delhi",
+    "pincode": "110076",
+    "address": "Mathura Road, Gautam Puri, Sarita Vihar",
+    "phone": "+91-11-26950401",
+    "services": ["Panchakarma", "Prakriti Analysis", "Preventive Wellness", "OPD Consultation"],
+    "rating": 4.8
+  },
+  {
+    "id": "ayush-002",
+    "name": "National Institute of Naturopathy (NIN)",
+    "system": "Yoga & Naturopathy",
+    "city": "Pune",
+    "state": "Maharashtra",
+    "pincode": "411001",
+    "address": "Bapu Bhavan, Tadiwala Road",
+    "phone": "+91-20-26059682",
+    "services": ["Hydrotherapy", "Yoga Therapy", "Dietary Counseling", "Stress Management"],
+    "rating": 4.7
+  },
+  {
+    "id": "ayush-003",
+    "name": "National Institute of Unani Medicine (NIUM)",
+    "system": "Unani",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "pincode": "560091",
+    "address": "Kottigepalya, Magadi Main Road",
+    "phone": "+91-80-23584260",
+    "services": ["Ilaj-bit-Tadbeer (Regimenal Therapy)", "Mizaj Assessment", "Lifestyle Wellness"],
+    "rating": 4.6
+  },
+  {
+    "id": "ayush-004",
+    "name": "National Institute of Siddha (NIS)",
+    "system": "Siddha",
+    "city": "Chennai",
+    "state": "Tamil Nadu",
+    "pincode": "600047",
+    "address": "Tambaram Sanatorium",
+    "phone": "+91-44-22411611",
+    "services": ["Varma Therapy", "Thokkanam", "Herbal Wellness", "General Consultation"],
+    "rating": 4.7
+  },
+  {
+    "id": "ayush-005",
+    "name": "National Institute of Homoeopathy (NIH)",
+    "system": "Homeopathy",
+    "city": "Kolkata",
+    "state": "West Bengal",
+    "pincode": "700106",
+    "address": "Block-GE, Sector-III, Salt Lake",
+    "phone": "+91-33-23370969",
+    "services": ["Constitutional Care", "Chronic Wellness Management", "OPD"],
+    "rating": 4.5
+  },
+  {
+    "id": "ayush-006",
+    "name": "Central Council for Research in Ayurvedic Sciences (CCRAS) Wellness Centre",
+    "system": "Ayurveda",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "pincode": "560001",
+    "address": "Ashoka Pillar Road, Jayanagar",
+    "phone": "+91-80-26563333",
+    "services": ["Dinacharya Guidance", "Prakriti Pariksha", "Preventive Care"],
+    "rating": 4.6
+  }
+]

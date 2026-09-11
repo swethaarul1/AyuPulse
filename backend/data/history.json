@@ -1,0 +1,128 @@
+[
+  {
+    "date": "2026-08-28",
+    "sleep_score": 4,
+    "stress_score": 2,
+    "mood_score": 4,
+    "digestion_score": 4,
+    "notes": "Felt grounded and well-rested",
+    "is_seeded": true
+  },
+  {
+    "date": "2026-08-29",
+    "sleep_score": 4,
+    "stress_score": 2,
+    "mood_score": 4,
+    "digestion_score": 3,
+    "notes": "Consistent morning routine",
+    "is_seeded": true
+  },
+  {
+    "date": "2026-08-30",
+    "sleep_score": 3,
+    "stress_score": 3,
+    "mood_score": 4,
+    "digestion_score": 4,
+    "notes": "Slightly busy day",
+    "is_seeded": true
+  },
+  {
+    "date": "2026-08-31",
+    "sleep_score": 4,
+    "stress_score": 2,
+    "mood_score": 5,
+    "digestion_score": 4,
+    "notes": "High energy after yoga",
+    "is_seeded": true
+  },
+  {
+    "date": "2026-09-01",
+    "sleep_score": 4,
+    "stress_score": 2,
+    "mood_score": 4,
+    "digestion_score": 4,
+    "notes": "Balanced digestion",
+    "is_seeded": true
+  },
+  {
+    "date": "2026-09-02",
+    "sleep_score": 3,
+    "stress_score": 3,
+    "mood_score": 3,
+    "digestion_score": 3,
+    "notes": "Late night work",
+    "is_seeded": true
+  },
+  {
+    "date": "2026-09-03",
+    "sleep_score": 4,
+    "stress_score": 2,
+    "mood_score": 4,
+    "digestion_score": 4,
+    "notes": "Restful weekend",
+    "is_seeded": true
+  },
+  {
+    "date": "2026-09-04",
+    "sleep_score": 3,
+    "stress_score": 3,
+    "mood_score": 3,
+    "digestion_score": 3,
+    "notes": "Workload increasing",
+    "is_seeded": true
+  },
+  {
+    "date": "2026-09-05",
+    "sleep_score": 2,
+    "stress_score": 4,
+    "mood_score": 3,
+    "digestion_score": 3,
+    "notes": "Restless night, racing mind",
+    "is_seeded": true
+  },
+  {
+    "date": "2026-09-06",
+    "sleep_score": 2,
+    "stress_score": 4,
+    "mood_score": 2,
+    "digestion_score": 2,
+    "notes": "Irregular meals, bloated",
+    "is_seeded": true
+  },
+  {
+    "date": "2026-09-07",
+    "sleep_score": 2,
+    "stress_score": 4,
+    "mood_score": 3,
+    "digestion_score": 3,
+    "notes": "Difficulty falling asleep",
+    "is_seeded": true
+  },
+  {
+    "date": "2026-09-08",
+    "sleep_score": 2,
+    "stress_score": 4,
+    "mood_score": 2,
+    "digestion_score": 2,
+    "notes": "Fatigued in the afternoon",
+    "is_seeded": true
+  },
+  {
+    "date": "2026-09-09",
+    "sleep_score": 3,
+    "stress_score": 4,
+    "mood_score": 2,
+    "digestion_score": 3,
+    "notes": "Short nap, still low energy",
+    "is_seeded": true
+  },
+  {
+    "date": "2026-09-10",
+    "sleep_score": 2,
+    "stress_score": 4,
+    "mood_score": 3,
+    "digestion_score": 2,
+    "notes": "Recent recurring sleep and stress trend",
+    "is_seeded": true
+  }
+]
